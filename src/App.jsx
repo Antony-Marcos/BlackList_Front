@@ -57,7 +57,7 @@ export default function App() {
       <div className="w-1/2 bg-gray-800 flex items-center justify-center">
         <img
           src={Blacklist}
-          alt="Blacklist Logo"
+          alt="Blacklist"
           className="w-full h-full"
         />
       </div>
