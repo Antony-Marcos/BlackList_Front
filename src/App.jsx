@@ -1,9 +1,45 @@
 import { useState } from 'react';
 import './App.css';
+import axios from 'axios';
 
 import Blacklist from './assets/Blacklist.png';
 
 export default function App() {
+  
+  const [username, setusername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState('');
+  const [mpassword, setMpassword] = useState(true); 
+  
+  
+  const login = async (e) => {
+    e.preventDefault();
+    setLoading(true)
+    setError('');
+
+
+    try{
+      const response = await axios.post('https://blacklist-backend.onrender.com/api/login/',{
+        username: username,
+        password: password
+      });
+
+    
+
+     const token = response.data.token;
+      localStorage.setItem('authToken', token);
+
+      console.log('Login bem-sucedido! Token:', token);
+      
+    } catch (error) {
+      console.error('Erro no login:', error);
+      setError('Usuário ou senha inválidos.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen">
       
@@ -11,7 +47,8 @@ export default function App() {
         <h1 className="text-3xl font-bold mb-9">SEJA BEM VINDO AO BLACKLIST</h1>
 
 
-        <form className="w-full max-w-sm">
+        <form className="w-full max-w-sm" onSubmit={login}>
+          {error && <p className='text-red-500 mb-4'>{error}</p>}
 
           <div className="mb-4">
             <label className="block text-sm font-bold mb-2" htmlFor="username">
@@ -20,23 +57,39 @@ export default function App() {
             <input
               id="username"
               type="text"
-              placeholder="Digite seu login"
+              value={username}
+              placeholder="Usuário"
+              onChange={(e) => setusername(e.target.value)}
               className="w-full px-3 py-2 text-white bg-transparent border border-white rounded focus:outline-none focus:ring-2 focus:ring-red-500 "
+              required
             />
           </div>
 
 
-          <div className="mb-4">
-            <label className="block text-sm font-bold mb-2" htmlFor="password">
-              Senha
-            </label>
-            <input
-              id="password"
-              type="password"
-              placeholder="Digite sua senha"
-              className="w-full px-3 py-2 text-white bg-transparent border border-white rounded focus:outline-none focus:ring-2 focus:ring-red-500 "
-            />
-          </div>
+          <div className="mb-4 relative">
+        <label className="block text-sm font-bold mb-2" htmlFor="password">
+         Senha
+         </label>
+  
+        <input
+          id="password"
+          type={mpassword ? "password" : "text"}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Senha"
+          className="w-full px-3 py-2 text-white bg-transparent border border-white rounded focus:outline-none focus:ring-2 focus:ring-red-500 pr-10"
+          required
+        />
+
+        <button
+          type="button"
+          onClick={() => setMpassword(!mpassword)}
+          className="absolute right-3 top-9 text-white focus:outline-none"
+        >
+          {mpassword ? '👁️‍🗨️' : '👁️'}
+        </button>
+      </div>
+
 
 
           <div className="mb-4 text-right">
@@ -44,11 +97,15 @@ export default function App() {
               Esqueceu a senha?
             </a>
           </div>
+
+
           <button
             type="submit"
             className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+            disabled={loading}
           >
-            Confirmar
+            {loading ? 'Entrando...' : 'Confirmar'}
+           
           </button>
         </form>
       </div>
