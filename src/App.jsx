@@ -20,10 +20,19 @@ export default function App() {
 
 
     try{
-      const response = await axios.post('https://blacklist-backend.onrender.com/api/login/',{
-        username: username,
-        password: password
-      });
+      const response = await axios.post(
+  'https://blacklist-backend.onrender.com/api/login/',
+  {
+    username: username,
+    password: password
+  },
+  {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  }
+);
+     
 
     
 
