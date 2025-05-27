@@ -48,7 +48,7 @@ export default function App() {
 
 
         <form className="w-full max-w-sm" onSubmit={login}>
-          {error && <p className='text-red-500 mb-4'>{error}</p>}
+          {error && <p className='text-red-500 mb-5'>{error}</p>}
 
           <div className="mb-4">
             <label className="block text-sm font-bold mb-2" htmlFor="username">
