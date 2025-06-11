@@ -26,7 +26,7 @@ export default function App() {
       const token = response.data.token;
       localStorage.setItem('authToken', token);
 
-      console.log('Login bem-sucedido! Token:', token);
+      console.log('Login bem-sucedido!');
       // redirecionar se quiser...
     } catch (error) {
       console.error('Erro no login:', error);

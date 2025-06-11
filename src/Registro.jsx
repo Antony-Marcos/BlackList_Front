@@ -7,9 +7,9 @@ export default function Registro() {
   const [password, setPassword] = useState('');
   const [erro, setErro] = useState('');
   const [loading, setLoading] = useState(false);
-  const [confirmpassword , setConfirm] = useState('');
+  const [confirmpassword, setConfirm] = useState('');
   const [email, setEmail] = useState('');
-  const [mpassword, setMpassword] = useState(true); 
+  const [mpassword, setMpassword] = useState(true);
   const [tpassword, setTpassword] = useState(true);
 
   const navigate = useNavigate();
@@ -18,6 +18,13 @@ export default function Registro() {
     e.preventDefault();
     setErro('');
     setLoading(true);
+
+    // Verificação de confirmação de senha
+    if (password !== confirmpassword) {
+      setErro('As senhas não coincidem.');
+      setLoading(false);
+      return;
+    }
 
     try {
       await axios.post(
@@ -29,8 +36,13 @@ export default function Registro() {
       alert('Cadastro realizado com sucesso!');
       navigate('/');
     } catch (error) {
-      console.error('Erro ao cadastrar:', error);
-      setErro('Erro ao cadastrar. Verifique os dados ou tente novamente.');
+      if (error.response && error.response.data) {
+        const data = error.response.data;
+        const errorMessages = Object.values(data).flat().join(' | ');
+        setErro(errorMessages);
+      } else {
+        setErro('Erro ao cadastrar. Verifique os dados ou tente novamente.');
+      }
     } finally {
       setLoading(false);
     }
@@ -41,7 +53,9 @@ export default function Registro() {
       <div className="max-w-md w-full">
         <h2 className="text-2xl font-bold mb-4">Cadastro</h2>
         <form onSubmit={handleRegister}>
-          {erro && <p className="text-red-500 mb-4">{erro}</p>}
+          {erro && (
+            <p className="text-red-500 mb-4 whitespace-pre-wrap">{erro}</p>
+          )}
           <input
             type="text"
             placeholder="Insira o nome do usuário"
@@ -51,25 +65,23 @@ export default function Registro() {
             required
           />
           <input
-          type='email'
-          placeholder='Insira o e-mail'
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className='w-full px-4 py-2 mb-4 bg-gray-800 border border-gray-600 rounded'
-          required
-          />
-
-
-
-          <div className='relative'>
-          <input
-            type={mpassword ? 'password': 'text'}
-            placeholder="Senha"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            type="email"
+            placeholder="Insira o e-mail"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className="w-full px-4 py-2 mb-4 bg-gray-800 border border-gray-600 rounded"
             required
           />
+
+          <div className="relative">
+            <input
+              type={mpassword ? 'password' : 'text'}
+              placeholder="Senha"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-2 mb-4 bg-gray-800 border border-gray-600 rounded"
+              required
+            />
             <button
               type="button"
               onClick={() => setMpassword(!mpassword)}
@@ -77,27 +89,25 @@ export default function Registro() {
             >
               {mpassword ? '👁️‍🗨️' : '👁️'}
             </button>
-            </div>
-
-
-            <div className='relative'>
-          <input
-            type={tpassword ? 'password' : 'text'}
-            placeholder="Confirmar senha"
-            value={confirmpassword}
-            onChange={(e) => setConfirm(e.target.value)}
-            className="w-full px-4 py-2 mb-4 bg-gray-800 border border-gray-600 rounded"
-            required
-          />
-          <button
-          type='button'
-          onClick={() => setTpassword(!tpassword)}
-          className='absolute right-3 top-3 text-white focus:outline-none'
-          >
-            {mpassword ? '👁️‍🗨️' : '👁️'}
-          </button>
           </div>
 
+          <div className="relative">
+            <input
+              type={tpassword ? 'password' : 'text'}
+              placeholder="Confirmar senha"
+              value={confirmpassword}
+              onChange={(e) => setConfirm(e.target.value)}
+              className="w-full px-4 py-2 mb-4 bg-gray-800 border border-gray-600 rounded"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setTpassword(!tpassword)}
+              className="absolute right-3 top-3 text-white focus:outline-none"
+            >
+              {tpassword ? '👁️‍🗨️' : '👁️'}
+            </button>
+          </div>
 
           <button
             type="submit"
@@ -108,7 +118,7 @@ export default function Registro() {
           </button>
         </form>
 
-        <p className="mt-4 text-sm text-gray-400  text-center">
+        <p className="mt-4 text-sm text-gray-400 text-center">
           Já tem conta?{' '}
           <Link to="/" className="text-red-400 hover:underline">
             Login
