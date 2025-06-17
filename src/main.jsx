@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import App from './App.jsx'; 
-import Registro from './registro.jsx'; 
+import Registro from './Registro.jsx'; 
 import Inicial from './Inicial.jsx';
 
 
