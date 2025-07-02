@@ -1,73 +1,195 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import PostCard from './post/Post';
 import Header from '../components/header';
-import Blacklist from '../src/assets/Blacklist.png';
-
+import axios from 'axios';
 
 export default function Inicial() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Simula autenticação
+  const [content, setContent] = useState('');
+  const [jogoId, setJogoId] = useState('');
+  const [video, setVideo] = useState(null);
+  const [images, setImages] = useState([]);
+  const [jogos, setJogos] = useState([]);
+  const [posts, setPosts] = useState([]);
+  const [isLoadingJogos, setIsLoadingJogos] = useState(true);
+  const [lastPostId, setLastPostId] = useState(null);
+
+  const userToken = localStorage.getItem('authToken');
   const navigate = useNavigate();
 
-  const handleProtectedClick = (path) => {
-    if (!isLoggedIn) {
-      alert('Você precisa estar logado para acessar esta funcionalidade.');
-      navigate('/login');
-    } else {
-      navigate(path);
-    }
-  };
+  // Buscar os jogos disponíveis
+  useEffect(() => {
+    const fetchJogos = async () => {
+      try {
+        const response = await axios.get('https://blacklist-backend.onrender.com/api/jogos/');
+        setJogos(response.data);
+      } catch (error) {
+        console.error('Erro ao carregar jogos:', error);
+        alert('Erro ao carregar jogos.');
+      } finally {
+        setIsLoadingJogos(false);
+      }
+    };
 
-  const postMock = {
-    username: 'João Gamer',
-    game: 'Counter Strike 2',
-    title: 'Partida insana hoje!',
-    description: 'Joguei demais! Olha essa jogada!',
-    media: 'https://via.placeholder.com/400x200.png',
-    comments: 5,
-    likes: 20,
-    dislikes: 1
+    fetchJogos();
+  }, []);
+
+  // Buscar os posts
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const response = await axios.get('https://blacklist-backend.onrender.com/api/posts/', {
+          headers: userToken ? { Authorization: `Token ${userToken}` } : {},
+        });
+         console.log("Resposta da API posts:", response.data); 
+        setPosts(response.data.reverse()); // Mostra os mais recentes primeiro
+      } catch (error) {
+        console.error('Erro ao carregar posts:', error);
+        alert('Erro ao carregar posts.');
+      }
+    };
+
+    fetchPosts();
+  }, [userToken]);
+
+  const handlePostSubmit = async () => {
+    if (!userToken) {
+      alert('Você precisa estar logado para postar.');
+      return navigate('/');
+    }
+
+    if (!content.trim() || !jogoId) {
+      alert('Preencha a descrição e selecione um jogo.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('content', content);
+    formData.append('jogo', jogoId);
+    if (video) formData.append('video', video);
+    images.forEach((img) => formData.append('images', img));
+
+    try {
+      const response = await axios.post(
+        'https://blacklist-backend.onrender.com/api/posts/create/',
+        formData,
+        {
+          headers: {
+            Authorization: `Token ${userToken}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      alert('Post enviado com sucesso!');
+      setLastPostId(response.data.id);
+      setContent('');
+      setVideo(null);
+      setImages([]);
+      setJogoId('');
+      setPosts((prev) => [response.data, ...prev]);
+    } catch (error) {
+      if (error.response) {
+        console.error('Erro ao enviar post:', error.response.data);
+        alert('Erro ao enviar post:\n' + JSON.stringify(error.response.data, null, 2));
+      } else {
+        console.error(error);
+        alert('Erro de rede ou servidor fora do ar.');
+      }
+    }
   };
 
   return (
     <div className="min-h-screen bg-black text-white p-2">
-      {/* Inputs de navegação */}
-     <Header />
+      <Header />
 
-      {/* Modal de Postagem */}
       <div className="bg-gray-800 p-4 rounded shadow-lg mb-8">
-        <textarea 
+        <textarea
           className="w-full bg-gray-700 p-2 rounded resize-none text-white"
-          placeholder="O que deseja postar?"
+          placeholder="Descreva o ocorrido..."
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
           minLength={5}
           maxLength={5000}
+          rows={4}
         />
-        <div className="flex gap-2 mt-2 flex-wrap">
-          <button className="bg-gray-900 px-3 py-1 rounded hover:bg-gray-700">Título</button>
-          <button className="bg-red-600 px-3 py-1 rounded hover:bg-red-900">Emoji</button>
-          <button className="bg-gray-900 px-3 py-1 rounded hover:bg-gray-700">Foto</button>
-          <button className="bg-red-600 px-3 py-1 rounded hover:bg-red-900">Vídeo</button>
-          <button className="bg-gray-900 px-3 py-1 rounded hover:bg-gray-700">Marcar Pessoas</button>
-          <button className="bg-red-600 px-3 py-1 rounded hover:bg-red-900">GIF</button>
+
+        {isLoadingJogos ? (
+          <p className="text-gray-400 mt-2">Carregando jogos...</p>
+        ) : (
+          <select
+            className="bg-gray-700 text-white mt-2 p-2 rounded w-full"
+            value={jogoId}
+            onChange={(e) => setJogoId(e.target.value)}
+          >
+            <option value="">Selecione o jogo</option>
+            {jogos.map((jogo) => (
+              <option key={jogo.id} value={jogo.id}>
+                {jogo.nome}
+              </option>
+            ))}
+          </select>
+        )}
+
+        <div className="mt-4 flex flex-col gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Vídeo:</label>
+            <label className="cursor-pointer bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded inline-block w-full text-center">
+              {video ? video.name : 'Selecionar vídeo'}
+              <input
+                type="file"
+                accept="video/*"
+                onChange={(e) => setVideo(e.target.files[0])}
+                className="hidden"
+              />
+            </label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Imagens:</label>
+            <label className="cursor-pointer bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded inline-block w-full text-center">
+              {images.length > 0 ? `${images.length} imagem(ns) selecionada(s)` : 'Selecionar imagens'}
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => setImages([...e.target.files])}
+                className="hidden"
+              />
+            </label>
+
+            {images.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mt-2">
+                {images.map((img, index) => (
+                  <img
+                    key={index}
+                    src={URL.createObjectURL(img)}
+                    alt={`preview-${index}`}
+                    className="h-20 w-full object-cover rounded"
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-        <button className=' bg-green-600 px-5 py-1 rounded mb-6 mt-9'>Enviar</button>
+
+        <button
+          className="bg-green-600 px-5 py-2 rounded mt-4 hover:bg-green-700"
+          onClick={handlePostSubmit}
+        >
+          Enviar Postagem
+        </button>
       </div>
 
-      {/* Posts */}
-      <div className="space-y-6">
-        {[1, 2].map((_, idx) => (
-          <div key={idx} className="bg-gray-800 p-4 rounded shadow">
-            <div className="text-xl font-bold">{postMock.title}</div>
-            <div className="text-sm text-gray-400">{postMock.username} - {postMock.game}</div>
-            <img src={Blacklist} alt="media" className="h-50 w-auto rounded" />
-            <p>{postMock.description}</p>
-            <div className="flex gap-4 mt-2">
-              <button className="text-blue-400">Comentários ({postMock.comments})</button>
-              <button className="text-green-400">Like ({postMock.likes})</button>
-              <button className="text-red-400">Dislike ({postMock.dislikes})</button>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Lista de posts */}
+      {posts.length > 0 ? (
+        <div className="space-y-6">
+          {posts.map((post) => (
+            <PostCard key={post.id} postId={post.id} userToken={userToken} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-gray-400">Nenhum post ainda.</p>
+      )}
     </div>
   );
 }

@@ -1,16 +1,18 @@
 import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom'; // <-- adicione useNavigate
 import './App.css';
 import axios from 'axios';
 import Blacklist from './assets/Blacklist.png';
-import { Link } from 'react-router-dom'; 
 
 export default function App() {
   const [username, setusername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mpassword, setMpassword] = useState(true); 
-  
+  const [mpassword, setMpassword] = useState(true);
+
+  const navigate = useNavigate(); // <-- hook para redirecionar
+
   const login = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -27,7 +29,7 @@ export default function App() {
       localStorage.setItem('authToken', token);
 
       console.log('Login bem-sucedido!');
-      // redirecionar se quiser...
+      navigate('/inicial'); // <-- redireciona após login
     } catch (error) {
       console.error('Erro no login:', error);
       setError('Usuário ou senha inválidos.');
