@@ -5,14 +5,13 @@ const PostCard = ({ postId, userToken }) => {
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reactionError, setReactionError] = useState('');
   const API_URL = `https://blacklist-backend.onrender.com/api/posts/${postId}/`;
 
   useEffect(() => {
     axios
       .get(API_URL, {
-        headers: {
-          Authorization: userToken ? `Token ${userToken}` : undefined,
-        },
+        headers: userToken ? { Authorization: `Token ${userToken}` } : {},
       })
       .then((res) => {
         setPost(res.data);
@@ -22,44 +21,66 @@ const PostCard = ({ postId, userToken }) => {
         console.error(err);
         setError('Erro ao carregar post.');
         setLoading(false);
+        
       });
   }, [postId, userToken]);
 
-  const handleLike = () => {
+  const handleReaction = (type) => {
+    if (!userToken) {
+      setReactionError('Você precisa estar logado para reagir.');
+      return;
+    }
+
     axios
       .post(
-        `https://blacklist-backend.onrender.com/posts/${postId}/like/`,
+        `https://blacklist-backend.onrender.com/posts/${postId}/react/${type}/`,
         {},
         {
           headers: { Authorization: `Token ${userToken}` },
         }
       )
       .then(() => {
-        setPost({ ...post, is_liked: true, total_likes: post.total_likes + 1 });
+        setPost((prev) => {
+          if (type === 'like') {
+            const liked = !prev.is_liked;
+            const wasDisliked = prev.is_unliked;
+
+            return {
+              ...prev,
+              is_liked: liked,
+              is_unliked: liked ? false : prev.is_unliked,
+              total_likes: liked ? prev.total_likes + 1 : prev.total_likes - 1,
+              total_unlikes: wasDisliked && liked ? prev.total_unlikes - 1 : prev.total_unlikes,
+            };
+          } else if (type === 'dislike') {
+            const disliked = !prev.is_unliked;
+            const wasLiked = prev.is_liked;
+
+            return {
+              ...prev,
+              is_unliked: disliked,
+              is_liked: disliked ? false : prev.is_liked,
+              total_unlikes: disliked ? prev.total_unlikes + 1 : prev.total_unlikes - 1,
+              total_likes: wasLiked && disliked ? prev.total_likes - 1 : prev.total_likes,
+            };
+          }
+          return prev;
+        });
+        setReactionError('');
+      })
+      .catch((err) => {
+        console.error(err);
+        setReactionError('Erro ao enviar reação. Verifique se está logado.');
       });
   };
-
-  const handleUnlike = () => {
-    axios
-      .post(
-        `https://blacklist-backend.onrender.com/posts/${postId}/unlike/`,
-        {},
-        {
-          headers: { Authorization: `Token ${userToken}` },
-        }
-      )
-      .then(() => {
-        setPost({ ...post, is_unliked: true, total_unlikes: post.total_unlikes + 1 });
-      });
-  };
-
-  if (loading) return <p>Carregando post...</p>;
-  if (error) return <p>{error}</p>;
 
   const formatUrl = (url) => {
     if (!url) return null;
     return url.startsWith('http://') ? url.replace('http://', 'https://') : url;
   };
+
+  if (loading) return <p>Carregando post...</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
 
   return (
     <div className="bg-gray-700 border rounded-lg shadow-md p-4 w-full max-w-[350px] mx-auto my-4 grid gap-4">
@@ -75,24 +96,21 @@ const PostCard = ({ postId, userToken }) => {
 
       {post.images.length > 0 && (
         <div className="grid grid-cols-2 gap-2">
-          {post.images.map((img) => {
-            const imgUrl = formatUrl(img.image);
-            return (
-              <div key={img.id} className="w-full h-32">
-                <img
-                  src={imgUrl}
-                  alt="Imagem do Post"
-                  className="w-full h-full object-cover rounded border"
-                />
-              </div>
-            );
-          })}
+          {post.images.map((img) => (
+            <div key={img.id} className="w-full h-32">
+              <img
+                src={formatUrl(img.image)}
+                alt="Imagem do Post"
+                className="w-full h-full object-cover rounded border"
+              />
+            </div>
+          ))}
         </div>
       )}
 
       <div className="flex items-center gap-4">
         <button
-          onClick={handleLike}
+          onClick={() => handleReaction('like')}
           className={`px-3 py-1 rounded text-white ${
             post.is_liked ? 'bg-green-600' : 'bg-gray-500'
           }`}
@@ -100,7 +118,7 @@ const PostCard = ({ postId, userToken }) => {
           👍 {post.total_likes}
         </button>
         <button
-          onClick={handleUnlike}
+          onClick={() => handleReaction('dislike')}
           className={`px-3 py-1 rounded text-white ${
             post.is_unliked ? 'bg-red-600' : 'bg-gray-500'
           }`}
@@ -108,6 +126,10 @@ const PostCard = ({ postId, userToken }) => {
           👎 {post.total_unlikes}
         </button>
       </div>
+
+      {reactionError && (
+        <p className="text-sm text-red-400 mt-2">{reactionError}</p>
+      )}
 
       <div>
         <h3 className="text-md font-semibold text-white">Comentários:</h3>
