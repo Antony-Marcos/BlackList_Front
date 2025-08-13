@@ -6,8 +6,12 @@ const PostCard = ({ postId, userToken }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reactionError, setReactionError] = useState('');
+  const [commentText, setCommentText] = useState('');
+  const [commentError, setCommentError] = useState('');
+
   const API_URL = `https://blacklist-backend.onrender.com/api/posts/${postId}/`;
 
+  // Buscar post
   useEffect(() => {
     axios
       .get(API_URL, {
@@ -21,16 +25,15 @@ const PostCard = ({ postId, userToken }) => {
         console.error(err);
         setError('Erro ao carregar post.');
         setLoading(false);
-        
       });
   }, [postId, userToken]);
 
+  // Reagir
   const handleReaction = (type) => {
     if (!userToken) {
       setReactionError('Você precisa estar logado para reagir.');
       return;
     }
-
     axios
       .post(
         `https://blacklist-backend.onrender.com/posts/${postId}/react/${type}/`,
@@ -44,7 +47,6 @@ const PostCard = ({ postId, userToken }) => {
           if (type === 'like') {
             const liked = !prev.is_liked;
             const wasDisliked = prev.is_unliked;
-
             return {
               ...prev,
               is_liked: liked,
@@ -55,7 +57,6 @@ const PostCard = ({ postId, userToken }) => {
           } else if (type === 'dislike') {
             const disliked = !prev.is_unliked;
             const wasLiked = prev.is_liked;
-
             return {
               ...prev,
               is_unliked: disliked,
@@ -68,11 +69,49 @@ const PostCard = ({ postId, userToken }) => {
         });
         setReactionError('');
       })
-      .catch((err) => {
-        console.error(err);
+      .catch(() => {
         setReactionError('Erro ao enviar reação. Verifique se está logado.');
       });
   };
+
+  // Enviar comentário
+ // Enviar comentário
+const handleCommentSubmit = (e) => {
+  e.preventDefault();
+  const trimmedComment = commentText.trim();
+
+  if (!trimmedComment) {
+    setCommentError('O comentário não pode estar vazio.');
+    return;
+  }
+  console.log({ content: commentText, postId, token: userToken });
+
+  axios
+    .post(
+      `https://blacklist-backend.onrender.com/posts/${postId}/comments/create/`,
+      { 
+        content: trimmedComment 
+      },
+      {
+        headers: {
+          Authorization: `Token ${userToken}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+    .then((res) => {
+      setPost((prev) => ({
+        ...prev,
+        comments: [...prev.comments, res.data],
+      }));
+      setCommentText('');
+      setCommentError('');
+    })
+    .catch(() => {
+      setCommentError('Erro ao enviar comentário. Verifique se está logado.');
+    });
+};
+
 
   const formatUrl = (url) => {
     if (!url) return null;
@@ -108,31 +147,45 @@ const PostCard = ({ postId, userToken }) => {
         </div>
       )}
 
+      {/* Botões de reação */}
       <div className="flex items-center gap-4">
         <button
           onClick={() => handleReaction('like')}
-          className={`px-3 py-1 rounded text-white ${
-            post.is_liked ? 'bg-green-600' : 'bg-gray-500'
-          }`}
+          className={`px-3 py-1 rounded text-white ${post.is_liked ? 'bg-green-600' : 'bg-gray-500'}`}
         >
           👍 {post.total_likes}
         </button>
         <button
           onClick={() => handleReaction('dislike')}
-          className={`px-3 py-1 rounded text-white ${
-            post.is_unliked ? 'bg-red-600' : 'bg-gray-500'
-          }`}
+          className={`px-3 py-1 rounded text-white ${post.is_unliked ? 'bg-red-600' : 'bg-gray-500'}`}
         >
           👎 {post.total_unlikes}
         </button>
       </div>
 
-      {reactionError && (
-        <p className="text-sm text-red-400 mt-2">{reactionError}</p>
-      )}
+      {reactionError && <p className="text-sm text-red-400 mt-2">{reactionError}</p>}
 
+      {/* Área de comentários */}
       <div>
         <h3 className="text-md font-semibold text-white">Comentários:</h3>
+
+        {userToken ? (
+          <form onSubmit={handleCommentSubmit} className="mt-2 mb-4">
+            <textarea
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              className="w-full p-2 border rounded text-black"
+              placeholder="Escreva um comentário..."
+            />
+            {commentError && <p className="text-sm text-red-400 mt-1">{commentError}</p>}
+            <button type="submit" className="mt-2 px-4 py-2 bg-blue-600 text-white rounded">
+              Enviar Comentário
+            </button>
+          </form>
+        ) : (
+          <p className="text-sm text-gray-400 mt-2">Você precisa estar logado para comentar.</p>
+        )}
+
         {post.comments.length === 0 ? (
           <p className="text-sm text-gray-400">Nenhum comentário ainda.</p>
         ) : (
@@ -140,9 +193,7 @@ const PostCard = ({ postId, userToken }) => {
             <div key={comment.id} className="border-t pt-2 mt-2">
               <p className="text-sm font-semibold text-white">{comment.author_username}</p>
               <p className="text-sm text-gray-300">{comment.content}</p>
-              <p className="text-xs text-gray-400">
-                {new Date(comment.created_at).toLocaleString()}
-              </p>
+              <p className="text-xs text-gray-400">{new Date(comment.created_at).toLocaleString()}</p>
             </div>
           ))
         )}
