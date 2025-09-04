@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom'; // <-- adicione useNavigate
+import { useNavigate, Link } from 'react-router-dom';
 import './App.css';
 import axios from 'axios';
 import Blacklist from './assets/Blacklist.png';
@@ -11,7 +11,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [mpassword, setMpassword] = useState(true);
 
-  const navigate = useNavigate(); // <-- hook para redirecionar
+  const navigate = useNavigate();
 
   const login = async (e) => {
     e.preventDefault();
@@ -19,19 +19,23 @@ export default function App() {
     setError('');
 
     try {
+      // ✅ rota correta: /api/token/
       const response = await axios.post(
-        'https://blacklist-backend.onrender.com/api/login/',
+        'https://blacklist-backend.onrender.com/api/token/',
         { username, password },
         { headers: { 'Content-Type': 'application/json' } }
       );
 
-      const token = response.data.token;
-      localStorage.setItem('authToken', token);
+      // ✅ Django JWT retorna "access" e "refresh"
+      const { access, refresh } = response.data;
+
+      localStorage.setItem('accessToken', access);
+      localStorage.setItem('refreshToken', refresh);
 
       console.log('Login bem-sucedido!');
-      navigate('/inicial'); // <-- redireciona após login
+      navigate('/inicial'); // redireciona após login
     } catch (error) {
-      console.error('Erro no login:', error);
+      console.error('Erro no login:', error.response?.data || error.message);
       setError('Usuário ou senha inválidos.');
     } finally {
       setLoading(false);
@@ -47,7 +51,9 @@ export default function App() {
           {error && <p className="text-red-500 mb-5">{error}</p>}
 
           <div className="mb-4">
-            <label className="block text-sm font-bold mb-2" htmlFor="username">Login</label>
+            <label className="block text-sm font-bold mb-2" htmlFor="username">
+              Login
+            </label>
             <input
               id="username"
               type="text"
@@ -60,7 +66,9 @@ export default function App() {
           </div>
 
           <div className="mb-4 relative">
-            <label className="block text-sm font-bold mb-2" htmlFor="password">Senha</label>
+            <label className="block text-sm font-bold mb-2" htmlFor="password">
+              Senha
+            </label>
             <input
               id="password"
               type={mpassword ? 'password' : 'text'}
